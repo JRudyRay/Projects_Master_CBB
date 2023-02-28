@@ -1,0 +1,234 @@
+#####################################################
+#######        COMPUTATIONAL BIOLOGY         ########
+#######             HOMEWORK 1               ########
+#####################################################
+#                                                   #
+# Implement the pairwise alignment algorithms       #
+# Needleman-Wunsch and Smith-Waterman.              #
+#                                                   #
+#####################################################
+#####################################################
+
+# In all functions the following parameters are the same:
+# seqA: the first sequence to align
+# seqB: the second sequence to align
+# score_gap: score for a gap
+# score_match: score for a character match
+# score_mismatch: score for a character mismatch
+# local: (logical) True if alignment is local, False otherwise
+
+init_score_matrix = function(nrow, ncol, local, score_gap) {
+  score_matrix <- matrix(0, nrow, ncol)# Initialize the score matrix with zeros.
+  
+  if (local == FALSE){
+    for (i in 2:nrow){
+      score_matrix[i,1] <- score_gap*(i-1)
+    }
+    for (j in 2:ncol){
+      score_matrix[1,j] <- score_gap*(j-1)
+    }
+  }
+  return(score_matrix)
+}
+
+##################################################
+
+init_path_matrix = function(nrow, ncol, local) {
+  path_matrix <- matrix("",nrow, ncol)
+  
+  if (local == FALSE){
+    for (i in 2:nrow){
+      path_matrix[i,1] <- "up"
+    }
+    for (j in 2:ncol){
+      path_matrix[1,j] <- "left"
+    }
+  }
+  return(path_matrix)
+}
+
+##################################################
+
+get_best_score_and_path = function(row, col, nucA, nucB, score_matrix, score_gap, score_match, score_mismatch, local) {
+  
+  prev_pos <- score_matrix[row-1,col-1]
+  prev_pos_left <- score_matrix[row,col-1]
+  prev_pos_up <- score_matrix[row-1,col]
+  
+  if(nucA == nucB){ # makes much more sense to distinguish between these two cases before heading into the loop
+    sm <- score_match
+  } else {
+    sm <- score_mismatch
+  }
+  
+  if ( local == FALSE){#Needleman-Wunsch algorithm GLOBAL, match/mismatch - gap - gap
+    scores <- matrix(c(prev_pos + sm, # match/mismatch
+                #prev_pos + score_mismatch,
+                prev_pos_left + score_gap, 
+                prev_pos_up + score_gap),1,3)
+  }
+  if (local == TRUE){
+    scores <- matrix(c(prev_pos + sm, # match/mismatch
+                #prev_pos + score_mismatch,
+                prev_pos_left + score_gap, 
+                prev_pos_up + score_gap,
+                0),1,4)
+  }
+  paths <- matrix(c("diag","left","up","-"),1,4)
+  
+  max_score <- max(scores)
+  max_location <- which(scores == max_score, arr.ind = TRUE)[1,]
+  best_path <- paths[max_location[1],max_location[2]]
+  
+  score <- max_score
+  path <- best_path
+  return(list("score"=score, "path"=path))
+}  
+  
+##################################################
+
+fill_matrices = function(seqA, seqB, score_gap, score_match, score_mismatch, local, score_matrix, path_matrix) {
+
+  seqA <- strsplit(seqA, "")[[1]]
+  seqB <- strsplit(seqB, "")[[1]]
+  if (local == FALSE) {
+
+    for (i in 2:(length(seqA)+1)){
+      for (j in 2:(length(seqB)+1)){
+        best_score <- as.numeric(get_best_score_and_path(i,j,seqA[i-1],seqB[j-1],score_matrix, score_gap, score_match, score_mismatch,FALSE)[1])
+        best_path <-  as.character(get_best_score_and_path(i,j,seqA[i-1],seqB[j-1],score_matrix, score_gap, score_match, score_mismatch,FALSE)[2])
+        
+        score_matrix[i,j] <- best_score
+        path_matrix[i,j] <- best_path
+      }
+    }
+  }
+  if (local == TRUE) {
+    for (i in 2:(length(seqA)+1)){
+      for (j in 2:(length(seqB)+1)){
+        best_score <- as.numeric(get_best_score_and_path(i,j,seqA[i-1],seqB[j-1],score_matrix, score_gap, score_match, score_mismatch,TRUE)[1])
+        best_path <-  as.character(get_best_score_and_path(i,j,seqA[i-1],seqB[j-1],score_matrix, score_gap, score_match, score_mismatch,TRUE)[2])
+        
+        score_matrix[i,j] <- best_score
+        path_matrix[i,j] <- best_path
+      }
+    }
+  }
+  return(list("score_matrix"=score_matrix, "path_matrix"=path_matrix))
+}
+
+############################################
+
+get_best_move = function(nucA, nucB, path, row, col) {
+
+    newrow <- 0
+    newcol <- 0
+    char1 <- ""
+    char2 <- ""
+    
+    if(path == "up"){
+      newrow <- (row - 1)
+      newcol <- col
+      char1 <- nucA
+      char2 <- "-"
+    }
+    if(path == "diag"){
+      newrow <- row-1
+      newcol <- col-1
+      char1 <- nucA
+      char2 <- nucB
+    }
+    if(path == "left"){
+      newrow <- row
+      newcol <- col-1
+      char1 <- "-"
+      char2 <- nucB
+    }
+
+    return(list("newrow"=newrow, "newcol"=newcol, "char1"=char1, "char2"=char2))
+}
+
+##################################
+
+get_best_alignment = function(seqA, seqB, score_matrix, path_matrix, local) {
+    # Return the best alignment from the pre-computed score matrix
+    # score_matrix: (numeric) filled up matrix of the scores
+    # path_matrix: (character) filled up matrix of paths
+    # nA <- nchar(seqA)
+    # nB <- nchar(seqB)
+    alignment <- c("","")
+    
+    if(local == FALSE){
+      posA <- nrow(score_matrix)
+      posB <- ncol(score_matrix)
+      score <- score_matrix[posA,posB]
+      
+      while(posA > 1 || posB > 1){
+        x <- get_best_move(substr(seqA,posA-1,posA-1),substr(seqB,posB-1,posB-1),path_matrix[posA,posB],posA,posB)
+        alignment[1] <- paste0(x$char1, alignment[1])
+        alignment[2] <- paste0(x$char2, alignment[2])
+        posA <- x$newrow
+        posB <- x$newcol
+      }
+    }
+    if(local == TRUE){
+      score <- max(score_matrix)
+      max_loc <- which(score_matrix == score, arr.ind = TRUE)[1,]
+      posA <- max_loc[1]
+      posB <- max_loc[2]
+
+      while(score_matrix[posA, posB] > 0){
+        x <- get_best_move(substr(seqA,posA-1,posA-1),substr(seqB,posB-1,posB-1),path_matrix[posA,posB],posA,posB)
+        alignment[1] <- paste0(x$char1, alignment[1])
+        alignment[2] <- paste0(x$char2, alignment[2])
+        posA <- x$newrow
+        posB <- x$newcol
+        
+      }
+    }
+    # Return the best score and alignment (or one thereof if there are multiple with equal score)
+    # score: (numeric) score of the best alignment
+    # alignment: (character) the actual alignment in the form of a vector of two strings
+    return(list("score"=score, "alignment"=alignment))
+}
+
+#############################
+
+
+align = function(seqA, seqB, score_gap, score_match, score_mismatch, local){
+    # Align the two sequences given the scoring scheme
+    # For testing purposes, use seqA for the rows and seqB for the columns of the matrices
+  
+    # Initialize score and path matrices
+    nA <- nchar(seqA)
+    nB <- nchar(seqB)
+    score_matrix <- init_score_matrix((nA+1), (nB+1), local, score_gap)
+    path_matrix <- init_path_matrix((nA+1), (nB+1), local)
+    
+    # Fill in the matrices with scores and paths using dynamic programming
+    score_matrix <- fill_matrices(seqA, seqB, score_gap, score_match, score_mismatch, local, score_matrix, path_matrix)$score_matrix
+    path_matrix <- fill_matrices(seqA, seqB, score_gap, score_match, score_mismatch, local, score_matrix, path_matrix)$path_matrix
+    
+    # Get the best score and alignment (or one thereof if there are multiple with equal score)
+    score <- get_best_alignment(seqA, seqB, score_matrix, path_matrix, local)$score
+    alignment <- get_best_alignment(seqA, seqB, score_matrix, path_matrix, local)$alignment
+    
+    # Return the best score and alignment (or one thereof if there are multiple with equal score)
+    # Returns the same value types as get_best_alignment
+    result <- list("score"=score, "alignment"=alignment)
+    return(result)
+}
+
+test_align = function() {
+    seqA = "TCACACTAC"
+    seqB = "AGCACAC"
+    score_gap = -2
+    score_match = +3
+    score_mismatch = -1
+    local = F
+    result = align(seqA, seqB, score_gap, score_match, score_mismatch, local)
+    print(result$alignment)
+    print(result$score)
+}
+
+test_align()

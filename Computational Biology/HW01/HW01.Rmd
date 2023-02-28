@@ -1,0 +1,14 @@
+---
+title: "HW01"
+author: "John Oehninger"
+date: '2022-09-26'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
