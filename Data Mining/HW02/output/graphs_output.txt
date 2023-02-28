@@ -1,0 +1,4 @@
+Pair of classes	SP
+mutagenic:mutagenic	5707.6864
+mutagenic:non-mutagenic	2984.726857142857
+non-mutagenic:non-mutagenic	1627.5046611237087

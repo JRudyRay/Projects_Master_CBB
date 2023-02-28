@@ -1,0 +1,4 @@
+Pair of classes	Manhattan	DTW, w = 0	DTW, w = 10		DTW, w = 25	DTW, w = inf
+abnormal:abnormal	67.77		67.77		38.65			26.48		25.37
+abnormal:normal	67.52		67.52		34.20			26.94		26.35
+normal:normal	45.65		45.65		24.42			22.17		21.87
