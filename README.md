@@ -1,1 +1,1 @@
-### Homework assignments
+### Homework assignments completed during my studies
