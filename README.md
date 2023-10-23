@@ -1,1 +1,1 @@
-### Homework assignments completed during my studies
+### Homework assignments completed during my master studies at ETH Zurich
